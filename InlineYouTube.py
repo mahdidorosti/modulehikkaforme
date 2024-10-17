@@ -30,7 +30,7 @@ from ..inline.types import InlineCall
 logger = logging.getLogger(__name__)
 
 # Add the path to your cookies file
-COOKIES_FILE = 'cookies.txt'  # Adjust the path if your cookies file is elsewhere
+COOKIES_FILE = '/root/snap/cookies.txt'  # Adjust the path if your cookies file is elsewhere
 
 
 def bytes2human(num, suffix="B"):
