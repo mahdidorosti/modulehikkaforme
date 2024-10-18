@@ -39,6 +39,7 @@ TEMP_COOKIES_FILE = '/tmp/cookies_temp.txt'
 # Copy the cookies.txt to a temporary file to prevent it from being overwritten
 try:
     shutil.copyfile(COOKIES_FILE, TEMP_COOKIES_FILE)
+    os.chmod(TEMP_COOKIES_FILE, 0o644)  # Ensure proper permissions for the temp file
 except PermissionError:
     logger.error(f"Permission denied while copying cookies file: {COOKIES_FILE}")
 except Exception as e:
@@ -108,8 +109,16 @@ class YouTubeMod(loader.Module):
         if not args:
             return await utils.answer(message, self.strings("args"))
 
-        # Use the temporary cookies file in the options
-        ydl_opts = {'cookiefile': TEMP_COOKIES_FILE}
+        # Ensure the temporary cookies file exists and is readable
+        if not os.path.exists(TEMP_COOKIES_FILE):
+            return await utils.answer(message, "Cookies file is missing or inaccessible.")
+
+        ydl_opts = {
+            'cookiefile': TEMP_COOKIES_FILE,  # Using the temp cookies file
+            'outtmpl': '%(title)s.%(ext)s',
+            'quiet': False,  # Enable output for debugging if needed
+            'noprogress': True,  # Disable progress bar for simplicity
+        }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
@@ -126,7 +135,6 @@ class YouTubeMod(loader.Module):
             } for item in info_dict["formats"] if item["ext"] in ["mp4", "webm"] and item["vcodec"] != "none" and (len(args) >= 2 and args[0] == item.get("format_note", 'Unknown format') or len(args) < 2)]
 
             caption = f"<b>{info_dict.get('title', 'Unknown title')}</b>\n\n"
-            # caption += info_dict["description"]
 
             await self.inline.form(
                 text=caption if formats_list else self.strings["no_qualt"],
@@ -177,7 +185,6 @@ class YouTubeMod(loader.Module):
         } for item in info_dict["formats"] if item["ext"] in ["mp4", "webm"] and item["vcodec"] != "none"]
 
         caption = f"<b>{info_dict.get('title', 'Unknown title')}</b>\n\n"
-        # caption += info_dict["description"]
 
         await call.edit(text=caption, reply_markup=utils.chunks(formats_list, 2))
 
