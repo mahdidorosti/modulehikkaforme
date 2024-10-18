@@ -108,17 +108,17 @@ class YouTubeMod(loader.Module):
                 return await utils.answer(message, e.msg)
 
             formats_list = [{
-                "text": f"{item['format_note']} ({item['video_ext']})",
+                "text": f"{item.get('format_note', 'Unknown format')} ({item.get('video_ext', 'Unknown')})",
                 "callback": self.format_change,
                 "args": (item, info_dict, message.chat.id, item["format_id"],),
-            } for item in info_dict["formats"] if item["ext"] in ["mp4", "webm"] and item["vcodec"] != "none" and (len(args) >= 2 and args[0] == item["format_note"] or len(args) < 2)]
+            } for item in info_dict["formats"] if item["ext"] in ["mp4", "webm"] and item["vcodec"] != "none" and (len(args) >= 2 and args[0] == item.get("format_note", 'Unknown format') or len(args) < 2)]
 
-            caption = f"<b>{info_dict['title']}</b>\n\n"
+            caption = f"<b>{info_dict.get('title', 'Unknown title')}</b>\n\n"
             # caption += info_dict["description"]
 
             await self.inline.form(
                 text=caption if formats_list else self.strings["no_qualt"],
-                photo=f"https://img.youtube.com/vi/{info_dict['id']}/0.jpg",
+                photo=f"https://img.youtube.com/vi/{info_dict.get('id', '')}/0.jpg",
                 message=message,
                 reply_markup=utils.chunks(formats_list, 2)
             )
@@ -130,13 +130,13 @@ class YouTubeMod(loader.Module):
         info_dict: dict,
         chat_id: int,
         format_id: int):
-        string = f"{self.strings['format']} {quality['format']}\n"
-        string += f"{self.strings['ext']} {quality['ext']}\n"
-        string += f"{self.strings['video_codec']} {quality['vcodec']}\n"
-        string += f"{self.strings['file_size']} {bytes2human(quality['filesize'])}\n"
+        string = f"{self.strings['format']} {quality.get('format', 'Unknown')}\n"
+        string += f"{self.strings['ext']} {quality.get('ext', 'Unknown')}\n"
+        string += f"{self.strings['video_codec']} {quality.get('vcodec', 'Unknown codec')}\n"
+        string += f"{self.strings['file_size']} {bytes2human(quality.get('filesize', 0))}\n"
 
         audio_keyboard = [{
-            "text": f"{self.strings['audio']} ({audio['format_note']})",
+            "text": f"{self.strings['audio']} ({audio.get('format_note', 'Unknown')})",
             "callback": self.download,
             "args": (info_dict["id"], quality["ext"], quality["format_id"], audio["format_id"], chat_id,),
         } for audio in info_dict["formats"] if audio["ext"] == "m4a"]
@@ -159,12 +159,12 @@ class YouTubeMod(loader.Module):
 
     async def back(self, call: InlineCall, info_dict: dict, chat_id: int):
         formats_list = [{
-            "text": f"{item['format_note']} ({item['video_ext']})",
+            "text": f"{item.get('format_note', 'Unknown format')} ({item.get('video_ext', 'Unknown')})",
             "callback": self.format_change,
             "args": (item, info_dict, chat_id, item["format_id"]),
         } for item in info_dict["formats"] if item["ext"] in ["mp4", "webm"] and item["vcodec"] != "none"]
 
-        caption = f"<b>{info_dict['title']}</b>\n\n"
+        caption = f"<b>{info_dict.get('title', 'Unknown title')}</b>\n\n"
         # caption += info_dict["description"]
 
         await call.edit(text=caption, reply_markup=utils.chunks(formats_list, 2))
@@ -205,7 +205,7 @@ class YouTubeMod(loader.Module):
 
         # Download thumb for video
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://img.youtube.com/vi/{meta['id']}/0.jpg") as resp:
+            async with session.get(f"https://img.youtube.com/vi/{meta.get('id', '')}/0.jpg") as resp:
                 with open(meta['id'] + ".jpg", 'wb') as fd:
                     async for chunk in resp.content.iter_chunked(512):
                         fd.write(chunk)
@@ -213,20 +213,20 @@ class YouTubeMod(loader.Module):
         await self._client.send_file(
             chat_id,
             "{0}x{1}.{2}.{3}".format(
-                (meta["width"]),
-                (meta["height"]),
-                (meta["id"]),
-                (meta["ext"].replace("webm", "mkv")),
+                (meta.get("width", 'Unknown')),
+                (meta.get("height", 'Unknown')),
+                (meta.get("id", 'Unknown')),
+                (meta.get("ext", 'Unknown').replace("webm", "mkv")),
             ),
             supports_streaming=True,
             thumb=meta["id"] + ".jpg"
         )
         os.remove(
             "{0}x{1}.{2}.{3}".format(
-                (meta["width"]),
-                (meta["height"]),
-                (meta["id"]),
-                (meta["ext"].replace("webm", "mkv")),
+                (meta.get("width", 'Unknown')),
+                (meta.get("height", 'Unknown')),
+                (meta.get("id", 'Unknown')),
+                (meta.get("ext", 'Unknown').replace("webm", "mkv")),
             )
         )
         os.remove(meta["id"] + ".jpg")
