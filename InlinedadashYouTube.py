@@ -19,6 +19,7 @@ import asyncio
 import logging
 import aiohttp
 import os
+import shutil  # Added for copying cookies.txt
 from yt_dlp.utils import DownloadError
 import yt_dlp
 from telethon.tl.types import Message
@@ -29,8 +30,19 @@ from ..inline.types import InlineCall
 
 logger = logging.getLogger(__name__)
 
-# Add the path to your cookies file
+# Add the path to your original cookies file
 COOKIES_FILE = '/root/snap/cookies.txt'  # Adjust the path if your cookies file is elsewhere
+
+# Temporary copy of the cookies file
+TEMP_COOKIES_FILE = '/tmp/cookies_temp.txt'
+
+# Copy the cookies.txt to a temporary file to prevent it from being overwritten
+try:
+    shutil.copyfile(COOKIES_FILE, TEMP_COOKIES_FILE)
+except PermissionError:
+    logger.error(f"Permission denied while copying cookies file: {COOKIES_FILE}")
+except Exception as e:
+    logger.error(f"Error copying cookies file: {str(e)}")
 
 
 def bytes2human(num, suffix="B"):
@@ -96,8 +108,8 @@ class YouTubeMod(loader.Module):
         if not args:
             return await utils.answer(message, self.strings("args"))
 
-        # Add 'cookiefile' to the options
-        ydl_opts = {'cookiefile': COOKIES_FILE}
+        # Use the temporary cookies file in the options
+        ydl_opts = {'cookiefile': TEMP_COOKIES_FILE}
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
@@ -182,11 +194,11 @@ class YouTubeMod(loader.Module):
 
         def download():
             nonlocal meta
-            # Add 'cookiefile' to the options
+            # Use the temporary cookies file in the options
             ydl_opts = {
                 "format": "{}+{}".format(str(video_format), str(audio_format)),
                 "outtmpl": "%(resolution)s.%(id)s.%(ext)s",
-                "cookiefile": COOKIES_FILE,  # Use the cookies file
+                "cookiefile": TEMP_COOKIES_FILE,  # Use the temporary cookies file
             }
             with yt_dlp.YoutubeDL(ydl_opts) as yd:
                 meta = yd.extract_info(
