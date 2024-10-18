@@ -67,7 +67,7 @@ class YouTubeMod(loader.Module):
     """Download YouTube videos with video and audio quality selection"""
 
     strings = {
-        "name": "InlinedadaYouTube",
+        "name": "InlinewedadaYouTube",
         "args": "🎞 <b>You need to specify link</b>",
         "downloading": "🎞 <b>Downloading...</b>",
         "not_found": "🎞 <b>Video not found...</b>",
@@ -82,7 +82,7 @@ class YouTubeMod(loader.Module):
     }
 
     strings_ru = {
-        "name": "InlinedadaYouTube",
+        "name": "InlinewedadaYouTube",
         "args": "🎞 <b>Вам необходимо указать ссылку</b>",
         "downloading": "🎞 <b>Скачиваю...</b>",
         "not_found": "🎞 <b>Видео не найдено...</b>",
