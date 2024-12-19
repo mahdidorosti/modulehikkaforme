@@ -52,7 +52,8 @@ class Groq(loader.Module):
 
         m = await utils.answer(message, self.strings['asking_groq'])
 
-        url = "https://api.groq.com/openai/v1/chat/completions"
+        # Updated endpoint
+        url = "https://api.groq.com/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.config['api_key']}",
             "Content-Type": "application/json"
@@ -73,6 +74,8 @@ class Groq(loader.Module):
 
         if response.status_code == 200:
             answer = response.json().get("choices", [{}])[0].get("message", {}).get("content", "No answer found.")
+        elif response.status_code == 404:
+            answer = "Error: Endpoint not found. Please check the API URL."
         else:
             answer = f"Error: Unable to get a response from Groq. Status code: {response.status_code}."
 
