@@ -57,7 +57,7 @@ class Groq(loader.Module):
         m = await utils.answer(message, self.strings['asking_groq'])
 
         # Correct API endpoint
-        url = "https://api.groq.com/openai/v1"
+        url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.config['api_key']}",
             "Content-Type": "application/json"
