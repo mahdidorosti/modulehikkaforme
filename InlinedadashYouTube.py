@@ -42,18 +42,22 @@ class Groq(loader.Module):
 
     @loader.command()
     async def groq(self, message):
-        """Ask a question to Groq"""
+        """Ask a question to Groq or reply to a message"""
+        # Get the text from the current message or replied message
         q = utils.get_args_raw(message)
         if not q:
-            return await utils.answer(message, self.strings["no_args"].format(self.get_prefix(), "groq", "[question]"))
+            if message.is_reply:
+                q = (await message.get_reply_message()).text
+            if not q:
+                return await utils.answer(message, self.strings["no_args"].format(self.get_prefix(), "groq", "[question]"))
 
         if not self.config['api_key']:
             return await utils.answer(message, self.strings["no_token"].format(self.get_prefix()))
 
         m = await utils.answer(message, self.strings['asking_groq'])
 
-        # Updated endpoint
-        url = "https://api.groq.com/v1/chat/completions"
+        # Correct API endpoint
+        url = "https://api.groq.com/openai/v1"
         headers = {
             "Authorization": f"Bearer {self.config['api_key']}",
             "Content-Type": "application/json"
