@@ -19,7 +19,6 @@ import asyncio
 import logging
 import aiohttp
 import os
-import shutil  # Added for copying cookies.txt
 from yt_dlp.utils import DownloadError
 import yt_dlp
 from telethon.tl.types import Message
@@ -30,20 +29,8 @@ from ..inline.types import InlineCall
 
 logger = logging.getLogger(__name__)
 
-# Add the path to your original cookies file
+# Add the path to your cookies file
 COOKIES_FILE = '/root/snap/cookies.txt'  # Adjust the path if your cookies file is elsewhere
-
-# Temporary copy of the cookies file
-TEMP_COOKIES_FILE = '/tmp/cookies_temp.txt'
-
-# Copy the cookies.txt to a temporary file to prevent it from being overwritten
-try:
-    shutil.copyfile(COOKIES_FILE, TEMP_COOKIES_FILE)
-    os.chmod(TEMP_COOKIES_FILE, 0o644)  # Ensure proper permissions for the temp file
-except PermissionError:
-    logger.error(f"Permission denied while copying cookies file: {COOKIES_FILE}")
-except Exception as e:
-    logger.error(f"Error copying cookies file: {str(e)}")
 
 
 def bytes2human(num, suffix="B"):
@@ -109,16 +96,8 @@ class YouTubeMod(loader.Module):
         if not args:
             return await utils.answer(message, self.strings("args"))
 
-        # Ensure the temporary cookies file exists and is readable
-        if not os.path.exists(TEMP_COOKIES_FILE):
-            return await utils.answer(message, "Cookies file is missing or inaccessible.")
-
-        ydl_opts = {
-            'cookiefile': TEMP_COOKIES_FILE,  # Using the temp cookies file
-            'outtmpl': '%(title)s.%(ext)s',
-            'quiet': False,  # Enable output for debugging if needed
-            'noprogress': True,  # Disable progress bar for simplicity
-        }
+        # Add 'cookiefile' to the options
+        ydl_opts = {'cookiefile': COOKIES_FILE}
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
@@ -135,6 +114,7 @@ class YouTubeMod(loader.Module):
             } for item in info_dict["formats"] if item["ext"] in ["mp4", "webm"] and item["vcodec"] != "none" and (len(args) >= 2 and args[0] == item.get("format_note", 'Unknown format') or len(args) < 2)]
 
             caption = f"<b>{info_dict.get('title', 'Unknown title')}</b>\n\n"
+            # caption += info_dict["description"]
 
             await self.inline.form(
                 text=caption if formats_list else self.strings["no_qualt"],
@@ -184,4 +164,70 @@ class YouTubeMod(loader.Module):
             "args": (item, info_dict, chat_id, item["format_id"]),
         } for item in info_dict["formats"] if item["ext"] in ["mp4", "webm"] and item["vcodec"] != "none"]
 
-        caption = f"<b>{info_dict.get('title', '
+        caption = f"<b>{info_dict.get('title', 'Unknown title')}</b>\n\n"
+        # caption += info_dict["description"]
+
+        await call.edit(text=caption, reply_markup=utils.chunks(formats_list, 2))
+
+    async def download(
+        self,
+        call: InlineCall,
+        video_id: str,
+        ext: str,
+        video_format: int,
+        audio_format: int,
+        chat_id: int,
+    ):
+        meta = {}
+
+        def download():
+            nonlocal meta
+            # Add 'cookiefile' to the options
+            ydl_opts = {
+                "format": "{}+{}".format(str(video_format), str(audio_format)),
+                "outtmpl": "%(resolution)s.%(id)s.%(ext)s",
+                "cookiefile": COOKIES_FILE,  # Use the cookies file
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as yd:
+                meta = yd.extract_info(
+                    "https://www.youtube.com/watch?v=" + video_id, download=False
+                )
+                yd.download("https://www.youtube.com/watch?v=" + video_id)
+
+        await call.edit(
+            text=f"{self.strings['downloading']}",
+        )
+        await utils.run_sync(download)
+
+        await call.edit(
+            text=f"{self.strings['uploading']}",
+        )
+
+        # Download thumb for video
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://img.youtube.com/vi/{meta.get('id', '')}/0.jpg") as resp:
+                with open(meta['id'] + ".jpg", 'wb') as fd:
+                    async for chunk in resp.content.iter_chunked(512):
+                        fd.write(chunk)
+
+        await self._client.send_file(
+            chat_id,
+            "{0}x{1}.{2}.{3}".format(
+                (meta.get("width", 'Unknown')),
+                (meta.get("height", 'Unknown')),
+                (meta.get("id", 'Unknown')),
+                (meta.get("ext", 'Unknown').replace("webm", "mkv")),
+            ),
+            supports_streaming=True,
+            thumb=meta["id"] + ".jpg"
+        )
+        os.remove(
+            "{0}x{1}.{2}.{3}".format(
+                (meta.get("width", 'Unknown')),
+                (meta.get("height", 'Unknown')),
+                (meta.get("id", 'Unknown')),
+                (meta.get("ext", 'Unknown').replace("webm", "mkv")),
+            )
+        )
+        os.remove(meta["id"] + ".jpg")
+        await call.delete()
