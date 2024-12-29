@@ -29,7 +29,7 @@ from .. import loader, utils
 from ..inline.types import InlineCall
 
 logger = logging.getLogger(__name__)
-6t/r5gfbň.
+
 # Add the path to your original cookies file
 COOKIES_FILE = '/root/snap/cookies.txt'  # Adjust the path if your cookies file is elsewhere
 
